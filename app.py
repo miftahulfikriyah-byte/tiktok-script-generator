@@ -41,13 +41,41 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNGSI API GEMINI DENGAN RETRY LOGIC ---
+# --- FUNGSI UNTUK MENDAPATKAN MODEL YANG TERSEDIA ---
+def get_working_model(api_key):
+    genai.configure(api_key=api_key)
+    try:
+        # Cek daftar model yang mendukung generateContent
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Prioritas model Flash karena paling cepat untuk gambar
+        priorities = [
+            'models/gemini-1.5-flash-latest',
+            'models/gemini-1.5-flash',
+            'models/gemini-pro-vision', # Fallback lama
+            'models/gemini-1.5-pro'
+        ]
+        
+        for p in priorities:
+            if p in available_models:
+                return p
+        
+        # Jika tidak ada yang cocok di prioritas, ambil yang pertama tersedia
+        return available_models[0] if available_models else None
+    except Exception:
+        # Fallback manual jika list_models gagal (beberapa akun instansi membatasi ini)
+        return 'gemini-1.5-flash'
+
+# --- FUNGSI API GEMINI DENGAN PENGECEKAN MODEL ---
 def generate_scripts(api_key, image, product_info):
     try:
         genai.configure(api_key=api_key)
         
-        # MENGGUNAKAN MODEL 1.5 FLASH DENGAN PENAMAAN YANG LEBIH KOMPATIBEL
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model_name = get_working_model(api_key)
+        if not model_name:
+            return "Waduh, akun API kamu tidak punya akses ke model Gemini manapun."
+            
+        model = genai.GenerativeModel(model_name)
         
         prompt = f"""
         Bertindaklah sebagai Content Creator TikTok dan Copywriter iklan profesional yang ahli membuat konten viral.
@@ -68,11 +96,13 @@ def generate_scripts(api_key, image, product_info):
         Gunakan gaya bahasa TikTok Indonesia yang 'relatable'. Gunakan banyak emoji relevan.
         """
 
-        # Retry logic untuk menangani rate limit atau gangguan jaringan
         retries = 3
         for i in range(retries):
             try:
-                response = model.generate_content([prompt, image])
+                # Menggunakan parameter content yang lebih eksplisit
+                response = model.generate_content(
+                    contents=[prompt, image]
+                )
                 return response.text
             except Exception as e:
                 if i < retries - 1:
@@ -109,6 +139,7 @@ with st.sidebar:
     st.caption("1. Buka [Google AI Studio](https://aistudio.google.com/app/apikey)")
     st.caption("2. Login Google & Klik 'Create API Key'")
     st.caption("3. Copy dan Tempel di sini")
+    st.info("Catatan: Jika pakai email kantor/instansi dan masih error, coba gunakan Gmail pribadi.")
 
 # Area Input Utama
 col1, col2 = st.columns([1, 1])
