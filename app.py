@@ -46,8 +46,8 @@ def generate_scripts(api_key, image, product_info):
     try:
         genai.configure(api_key=api_key)
         
-        # MENGGUNAKAN MODEL 1.5 FLASH (LEBIH STABIL & PASTI TERSEDIA)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # MENGGUNAKAN MODEL 1.5 FLASH DENGAN PENAMAAN YANG LEBIH KOMPATIBEL
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
         prompt = f"""
         Bertindaklah sebagai Content Creator TikTok dan Copywriter iklan profesional yang ahli membuat konten viral.
